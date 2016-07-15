@@ -8,7 +8,8 @@ def adr():
     '''adr : Amazon Distributed Runner
 
     Usage:
-        adr <runner> [--rundir=DIR] [--verbose=LEVEL]
+        adr create [--verbose=LEVEL]
+        adr process <runner> [--rundir=DIR] [--verbose=LEVEL]
 
     Positional arguments:
         runner             runner ID
@@ -16,7 +17,7 @@ def adr():
     Options:
         -h, --help         show this help message and exit
         --rundir=DIR       directory to store and run models [default: ~]
-        --verbose=LEVEL    write logging messages [default: 20]
+        --verbose=LEVEL    write logging messages [default: 30]
 
     '''
 
@@ -33,6 +34,9 @@ def adr():
     console.setFormatter(logging.Formatter('%(levelname)-8s %(message)s'))
     logging.getLogger('').addHandler(console)
 
-    # start listener
-    while True:
-        run_job(arguments['<runner>'], arguments['--rundir'])
+    if arguments['create']:
+        return create_runner()
+    elif arguments['process']:
+        while True:
+            if not run_job(arguments['<runner>'], arguments['--rundir']):
+                break

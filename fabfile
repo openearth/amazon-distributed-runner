@@ -1,0 +1,51 @@
+from fabric.api import *
+from fabric.contrib.files import *
+
+
+def runv(cmd, env='~/.envs/adr'):
+     return run('source {}/bin/activate && {}'.format(env, cmd))
+
+
+@parallel
+def stop():
+
+    run('pkill adr')
+
+
+@parallel
+def start(runner_id):
+
+     return runv('adr process --runner {}'.format(runner_id))
+
+
+@parallel
+def install(update=False, required_packages=['boto3', 'fabric']):
+
+     # make sure virtualenv directory extists
+     if not exists('~/.envs'):
+          run('mkdir ~/.envs')
+
+     # make sure virtualenv is installed
+     if not run('which virtualenv'):
+          run('sudo pip install virtualenv')
+
+    # make sure virtualenv adr exists
+    if not exists('~/.envs/adr'):
+         run('virtualenv ~/.envs/adr')
+         
+    # check for installed packages
+    packages = runv('pip freeze')
+    packages = re.split('\s+', re.sub('==[\d\.]+', '', packages.lower()))
+    
+    # install missing packages
+    for package in required_packages:
+         if package.lower() not in packages:
+              runv('pip install {}'.format(package))
+              
+    # install adr from github.com
+    if 'adr' not in packages or update:
+         
+         if not contains('~/.ssh/config', 'Host github.com'):
+              append('~/.ssh/config', 'Host github.com\n  StrictHostKeyChecking no')
+
+          runv('pip install git+git://github.com/openearth/amazon-distributed-runner.git')

@@ -9,6 +9,9 @@ import logging
 import subprocess
 
 
+logger = logging.getLogger(__file__)
+
+
 def create_queue(sqs, runner_id):
     
     sqs.create_queue(QueueName=runner_id)
