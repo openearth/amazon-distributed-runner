@@ -147,6 +147,8 @@ def process_job(sqs, s3, runner_id, workingdir='.'):
 
     batch_id = message['Batch']
     cmd = message['Command']
+    pre = message['PreProcessing']
+    post = message['PostProcessing']
     
     # download data
     batchpath = os.path.join(workingdir, batch_id)
@@ -158,10 +160,13 @@ def process_job(sqs, s3, runner_id, workingdir='.'):
     shpath = os.path.join(batchpath, shfile)
     with open(shpath, 'w') as fp:
         fp.write('#!/bin/bash\n\n')
-        fp.write('source ~/.envs/aeolis/bin/activate\n')
+        if pre:
+            fp.write('{}\n'.format(pre))
         fp.write('{}\n'.format(cmd))
+        if post:
+            fp.write('{}\n'.format(post))
     os.chmod(shpath, 0744)
-    subprocess.call('dtach -n `mktemp -u ~/aeolis.XXXX` ./{}'.format(shfile),
+    subprocess.call('./{}'.format(shfile), #dtach -n `mktemp -u ~/aeolis.XXXX` 
                     cwd=batchpath, shell=True)
     
     # store data
@@ -200,17 +205,19 @@ def get_job(sqs, runner_id, delay=10, retry=30):
         time.sleep(delay)
 
 
-def upload_files(s3, runner_id, batch_id, path, include_patterns=['\.nc$']):
-    
+def upload_files(s3, runner_id, batch_id, path,
+                 include_patterns=['\.nc$'], overwrite=False):
+
     for root, dirs, files in os.walk(os.path.join(path, batch_id)):
         for fname in files:
             if any([re.search(p, fname) for p in include_patterns]):
                 key = '{}/{}'.format(batch_id, fname)
-                fpath = os.path.join(root, fname)
-                s3.Object(runner_id, key).upload_file(fpath)
+                if not key_exists(s3, runner_id, key) or overwrite:
+                    fpath = os.path.join(root, fname)
+                    s3.Object(runner_id, key).upload_file(fpath)
 
-                logger.info('Uploaded "{}" to "{}/" in bucket "{}".'.format(
-                    os.path.relpath(fpath, path), batch_id, runner_id))
+                    logger.info('Uploaded "{}" to "{}/" in bucket "{}".'.format(
+                        os.path.relpath(fpath, path), batch_id, runner_id))
                 
 
 def upload_batch(s3, runner_id, path, exclude_patterns=['\.log$', '\.nc$', '\.pyc$']):
@@ -291,7 +298,8 @@ def parse_message(message):
 ### QUEUE ############################################################
 
 def queue(runner_id, files, region_name=REGION_NAME, command='aeolis {}',
-          preprocessing=None, postprocessing=None, store_patterns=['\.nc$']):
+          preprocessing='source ~/.envs/aeolis/bin/activate', postprocessing=None,
+          store_patterns=['\.nc$']):
     
     s3 = boto3.resource('s3', region_name=region_name)
     sqs = boto3.resource('sqs', region_name=region_name)
@@ -353,3 +361,16 @@ def queue_job(sqs, runner_id, batch_id, command,
     
     logger.info('Queued job "{}" from batch "{}" for runner "{}".'.format(
         stats['MessageId'], batch_id, runner_id))
+
+
+def key_exists(s3, runner_id, key):
+    
+    try:
+        s3.Object(runner_id, key).load()
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            return False
+        else:
+            raise e
+
+    return True
