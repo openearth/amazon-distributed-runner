@@ -109,7 +109,20 @@ Options:
 
     
 def adr_destroy():
-    '''adr_destroy : '''
+    '''adr_destroy : Destroy runner and workers
+
+Usage:
+    adr destroy [<runner>] [options]
+
+Positional arguments:
+    runner             Runner ID
+
+Options:
+    -h, --help         Show this help message and exit
+    --verbose=LEVEL    Write logging messages [default: 30]
+
+    '''
+    
     argv = docopt.docopt(adr_destroy.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, argv['--verbose'])
@@ -117,7 +130,21 @@ def adr_destroy():
 
     
 def adr_queue():
-    '''adr_queue : '''
+    '''adr_queue : Queue batch
+
+Usage:
+    adr queue <files> [<runner>] [options]
+
+Positional arguments:
+    files              Input files to queue
+    runner             Runner ID
+
+Options:
+    -h, --help         Show this help message and exit
+    --verbose=LEVEL    Write logging messages [default: 30]
+
+    '''
+    
     argv = docopt.docopt(adr_queue.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, argv['--verbose'])
@@ -125,7 +152,20 @@ def adr_queue():
 
     
 def adr_process():
-    '''adr_process : '''
+    '''adr_process : Process jobs from queue
+
+Usage:
+    adr process [<runner>] [options]
+
+Positional arguments:
+    runner             Runner ID
+
+Options:
+    -h, --help         Show this help message and exit
+    --verbose=LEVEL    Write logging messages [default: 30]
+
+    '''
+    
     argv = docopt.docopt(adr_process.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, argv['--verbose'])

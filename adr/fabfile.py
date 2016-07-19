@@ -60,5 +60,5 @@ def install(required_packages=['boto3', 'fabric', 'docopt']):
      if not contains('~/.ssh/config', 'Host github.com'):
           append('~/.ssh/config', 'Host github.com\n  StrictHostKeyChecking no')
 
-     runv('pip install git+git://github.com/openearth/amazon-distributed-runner.git')
+     runv('pip install --upgrade git+git://github.com/openearth/amazon-distributed-runner.git')
 

@@ -60,7 +60,7 @@ def launch(runner_id, n, user='ubuntu', password=None, key_filename=None, **kwar
     # register workers
     for worker in workers:
         key = '_workers/{}'.format(worker)
-        s3.Object(runner_id, key).put(Body='')
+        #s3.Object(runner_id, key).put(Body='')
 
     # install and execute queue processor
     with fabric.api.settings(user=user, password=password, key_filename=key_filename,
