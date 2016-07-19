@@ -69,8 +69,7 @@ Options:
     argv = docopt.docopt(adr_create.__doc__)
     set_logger('adr', int(argv['--verbose']))
     runner_id = adr.create(region_name=argv['--region'])
-    set_runner(runner_id)
-    return runner_id
+    return set_runner(runner_id)
 
     
 def adr_launch():
@@ -164,7 +163,11 @@ Options:
     argv = docopt.docopt(adr_destroy.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    return adr.destroy(runner_id)
+    adr.destroy(runner_id)
+    for runner in adr.get_runners():
+        if runner != runner_id:
+            set_runner(runner)
+            break
 
     
 def adr_queue():
@@ -242,7 +245,7 @@ def adr_set():
     '''adr_set : Set current runner
 
 Usage:
-    adr set <runner>
+    adr set [<runner>]
 
 Positional arguments:
     runner             Runner ID
@@ -253,8 +256,15 @@ Options:
 '''
     
     argv = docopt.docopt(adr_set.__doc__)
-    runner_id = get_runner(argv['<runner>'])
-    return set_runner(runner_id)
+    if argv['<runner>'] is None:
+        runner_id = get_runner(argv['<runner>'])
+        for runner in adr.get_runners():
+            if runner == runner_id:
+                print '* {}'.format(runner)
+            else:
+                print '  {}'.format(runner)
+    else:
+        return set_runner(argv['<runner>'])
 
 
 def get_runner(runner_id):
