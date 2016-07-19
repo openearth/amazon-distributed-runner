@@ -136,6 +136,9 @@ def process(runner_id, workingdir='.', region_name=REGION_NAME):
     if message is None:
         logger.info('No jobs left. Stop')
         return False
+
+    batch_id = message['Batch']
+    cmd = message['Command']
     
     # download data
     batchpath = os.path.join(workingdir, batch_id)
