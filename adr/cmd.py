@@ -19,6 +19,7 @@ runs on the workers.
 Usage:
     adr create    Create runner
     adr launch    Launch workers
+    adr prepare   Prepare workers
     adr destroy   Destroy runner and workers
     adr queue     Queue job to runner
     adr process   Process jobs from queue
@@ -36,6 +37,8 @@ Options:
             return adr_create()
         elif sys.argv[1] == 'launch':
             return adr_launch()
+        elif sys.argv[1] == 'prepare':
+            return adr_prepare()
         elif sys.argv[1] == 'destroy':
             return adr_destroy()
         elif sys.argv[1] == 'queue':
@@ -58,13 +61,14 @@ Usage:
     
 Options:
     -h, --help         Show this help message and exit
+    --region=REGION    Amazon region [default: eu-central-1]
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
     argv = docopt.docopt(adr_create.__doc__)
     set_logger('adr', int(argv['--verbose']))
-    runner_id = adr.create()
+    runner_id = adr.create(region_name=argv['--region'])
     set_runner(runner_id)
     return runner_id
 
@@ -81,6 +85,7 @@ Positional arguments:
 Options:
     -h, --help         Show this help message and exit
     -n N               Number of workers [default: 1]
+    --region=REGION    Amazon region [default: eu-central-1]
     --user=USER        SSH username
     --password=PW      SSH password
     --key=KEY          SSH key filename
@@ -97,6 +102,7 @@ Options:
     set_logger(runner_id, int(argv['--verbose']))
     workers = adr.launch(runner_id,
                          n=argv['-n'],
+                         region_name=argv['--region'],
                          user=argv['--user'],
                          password=argv['--password'],
                          key_filename=argv['--key'],
@@ -108,6 +114,38 @@ Options:
     return workers
 
     
+def adr_prepare():
+    '''adr_prepare : Prepare workers
+
+Usage:
+    adr prepare [<runner>] [options]
+    
+Positional arguments:
+    runner             Runner ID
+
+Options:
+    -h, --help         Show this help message and exit
+    --user=USER        SSH username [default: ubuntu]
+    --password=PW      SSH password
+    --key=KEY          SSH key filename
+    --region=REGION    Amazon region [default: eu-central-1]
+    --verbose=LEVEL    Write logging messages [default: 30]
+
+    '''
+    
+    argv = docopt.docopt(adr_prepare.__doc__)
+    runner_id = get_runner(argv['<runner>'])
+    set_logger(runner_id, int(argv['--verbose']))
+    workers = adr.get_workers(region_name=argv['--region'])
+    if workers.has_key(runner_id):
+        adr.prepare_workers(workers[runner_id],
+                            runner_id,
+                            user=argv['--user'],
+                            password=argv['--password'],
+                            key_filename=argv['--key'],
+                            warn_only=True)
+
+
 def adr_destroy():
     '''adr_destroy : Destroy runner and workers
 
@@ -162,6 +200,8 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
+    --workingdir=PATH  Working directory [default: .]
+    --region=REGION    Amazon region [default: eu-central-1]
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
@@ -169,7 +209,9 @@ Options:
     argv = docopt.docopt(adr_process.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    return adr.process(runner_id)
+    return adr.process(runner_id,
+                       workingdir=argv['--workingdir'],
+                       region_name=argv['--region'])
 
     
 def adr_list():
@@ -183,6 +225,7 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
+    --region=REGION    Amazon region [default: eu-central-1]
     --verbose=LEVEL    Write logging messages [default: 30]
     
     '''
@@ -190,7 +233,7 @@ Options:
     argv = docopt.docopt(adr_list.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    return json.dumps(adr.list_workers(), indent=4)
+    return json.dumps(adr.get_workers(region_name=argv['--region']), indent=4)
 
     
 def adr_set():

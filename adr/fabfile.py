@@ -2,33 +2,32 @@ from fabric.api import *
 from fabric.contrib.files import *
 
 
-#env.user = 'ubuntu'
-#env.key_filename = '/Users/hoonhout/.ssh/amazon/AmazonAeoLiSTestKey.pem'
-
-
 def runv(cmd, env='~/.envs/adr', socket=None):
      cmd = 'source {}/bin/activate && {}'.format(env, cmd)
      if socket is not None:
           run('echo "{}" > ~/adr.sh'.format(cmd))
           run('chmod a+x ~/adr.sh')
-          return run('dtach -n `mktemp -u ~/{0}.XXXX` "~/adr.sh"'.format(socket))
+          return run('dtach -n `mktemp -u ~/{0}.XXXX` ~/adr.sh'.format(socket))
      else:
           return run(cmd)
 
 
-@parallel
+#@parallel
+@task
 def stop():
 
      run('pkill adr', warn_only=True)
 
 
-@parallel
+#@parallel
+@task
 def start(runner_id):
 
      return runv('adr process {}'.format(runner_id), socket='adr')
 
 
-@parallel
+#@parallel
+@task
 def install(required_packages=['boto3', 'fabric', 'docopt']):
 
      # install dtach
@@ -61,4 +60,3 @@ def install(required_packages=['boto3', 'fabric', 'docopt']):
           append('~/.ssh/config', 'Host github.com\n  StrictHostKeyChecking no')
 
      runv('pip install --upgrade git+git://github.com/openearth/amazon-distributed-runner.git')
-
