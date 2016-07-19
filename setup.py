@@ -10,12 +10,13 @@ setup(
     install_requires=[
         'boto3',
         'fabric',
+        'docopt',
     ],
     #setup_requires=[
     #    'sphinx',
     #    'sphinx_rtd_theme'
     #],
     entry_points={'console_scripts': [
-        'adr = adr.cmd:adr',
+        'adr = adr.cmd:adr_cmd',
     ]},
 )
