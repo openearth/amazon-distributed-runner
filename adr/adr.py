@@ -126,15 +126,23 @@ def get_workers(region_name=REGION_NAME, key='_workers/'):
 
 ### PROCESS ##########################################################
 
-def process(runner_id, workingdir='.', region_name=REGION_NAME):
+def process(runner_id, workingdir='.', region_name=REGION_NAME, stop_on_empty=False):
     
     s3 = boto3.resource('s3', region_name=region_name)
     sqs = boto3.resource('sqs', region_name=region_name)
 
+    while True:
+        if not process_job(sqs, s3, runner_id, workingdir='.'):
+            if stop_on_empty:
+                logger.info('No jobs left. Stop')
+                break
+    
+
+def process_job(sqs, s3, runner_id, workingdir='.'):
+    
     # read message
     message = get_job(sqs, runner_id)
     if message is None:
-        logger.info('No jobs left. Stop')
         return False
 
     batch_id = message['Batch']
