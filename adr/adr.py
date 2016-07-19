@@ -17,7 +17,7 @@ REGION_NAME = 'eu-central-1'
 logger = logging.getLogger(__name__)
 
 
-## CREATE ############################################################
+### CREATE ###########################################################
 
 def create(region_name=REGION_NAME):
 
@@ -47,7 +47,7 @@ def create_bucket(s3, runner_id, region_name=REGION_NAME, ACL='private'):
     logger.info('Created S3 bucket "{}".'.format(runner_id))
     
 
-## LAUNCH ############################################################
+### LAUNCH ###########################################################
 
 def launch(runner_id, n, region_name=REGION_NAME,
            user='ubuntu', password=None, key_filename=None, **kwargs):
@@ -101,29 +101,6 @@ def prepare_workers(workers, runner_id,
         fabfile.execute(fabfile.stop)
         fabfile.execute(fabfile.start, runner_id=runner_id)
 
-
-## LIST ##############################################################
-
-def get_workers(region_name=REGION_NAME, key='_workers/'):
-
-    sqs = boto3.resource('sqs', region_name=region_name)
-    queues = [os.path.split(q.url)[1] for q in sqs.queues.all()]
-    
-    s3 = boto3.resource('s3', region_name=region_name)
-
-    workers = {}
-    for bucket in s3.buckets.all():
-        if bucket.name in queues:
-            runner_id = bucket.name
-
-            # queue and bucket available
-            workers[runner_id] = []
-            for obj in bucket.objects.filter(Prefix=key):
-                if obj.key != key:
-                    workers[runner_id].append(os.path.split(obj.key)[1])
-
-    return workers
-            
 
 ### PROCESS ##########################################################
 
@@ -219,44 +196,6 @@ def upload_files(s3, runner_id, batch_id, path,
                         os.path.relpath(fpath, path), batch_id, runner_id))
                 
 
-def upload_batch(s3, runner_id, path, exclude_patterns=['\.log$', '\.nc$', '\.pyc$']):
-    
-    batch_id = str(uuid.uuid4())
-
-    logger.info('Creating batch "{}"...'.format(batch_id))
-    
-    zfile = '{}.zip'.format(batch_id)
-    zpath = os.path.abspath(os.path.join(path, '..', zfile))
-    with zipfile.ZipFile(zpath, mode='w', compression=zipfile.ZIP_DEFLATED) as zh:
-        
-        if os.path.isdir(path):
-            for root, dirs, files in os.walk(path):
-                for fname in files:
-
-                    abspath = os.path.join(root, fname)
-
-                    # check if any exclude pattern matches
-                    if any([re.search(p, abspath) for p in exclude_patterns]):
-                        continue
-
-                    relpath = os.path.relpath(abspath, path)
-                    zh.write(abspath, os.path.join(batch_id, relpath))
-        else:
-            zh.write(path, os.path.join(batch_id, os.path.split(path)[1]))
-
-    logger.info('Created "{}".'.format(zpath))
-    
-    s3.Object(runner_id, zfile).upload_file(zpath)
-    
-    logger.info('Uploaded "{}" to bucket "{}".'.format(zfile, runner_id))
-    
-    os.unlink(zpath)
-    
-    logger.info('Removed "{}".'.format(zpath))
-    
-    return batch_id
-            
-            
 def download_batch(s3, runner_id, batch_id, path):
     
     zfile = '{}.zip'.format(batch_id)
@@ -275,16 +214,6 @@ def download_batch(s3, runner_id, batch_id, path):
     os.unlink(zpath)
     
     logger.info('Removed "{}".'.format(zpath))
-
-
-def find_root(files):
-    parts = [f.split(os.path.sep) for f in files]
-    ix = [len(set(x))<=1 for x in zip(*parts)].index(False)
-    root = os.path.sep.join(parts[0][:ix])
-    
-    logger.info('Determined root directory: "{}".'.format(root))
-    
-    return root
 
 
 def parse_message(message):
@@ -362,6 +291,106 @@ def queue_job(sqs, runner_id, batch_id, command,
         stats['MessageId'], batch_id, runner_id))
 
 
+def upload_batch(s3, runner_id, path, exclude_patterns=['\.log$', '\.nc$', '\.pyc$']):
+    
+    batch_id = str(uuid.uuid4())
+
+    logger.info('Creating batch "{}"...'.format(batch_id))
+    
+    zfile = '{}.zip'.format(batch_id)
+    zpath = os.path.abspath(os.path.join(path, '..', zfile))
+    with zipfile.ZipFile(zpath, mode='w', compression=zipfile.ZIP_DEFLATED) as zh:
+        
+        if os.path.isdir(path):
+            for root, dirs, files in os.walk(path):
+                for fname in files:
+
+                    abspath = os.path.join(root, fname)
+
+                    # check if any exclude pattern matches
+                    if any([re.search(p, abspath) for p in exclude_patterns]):
+                        continue
+
+                    relpath = os.path.relpath(abspath, path)
+                    zh.write(abspath, os.path.join(batch_id, relpath))
+        else:
+            zh.write(path, os.path.join(batch_id, os.path.split(path)[1]))
+
+    logger.info('Created "{}".'.format(zpath))
+    
+    s3.Object(runner_id, zfile).upload_file(zpath)
+    
+    logger.info('Uploaded "{}" to bucket "{}".'.format(zfile, runner_id))
+    
+    os.unlink(zpath)
+    
+    logger.info('Removed "{}".'.format(zpath))
+    
+    return batch_id
+            
+
+### DESTROY ##########################################################
+
+def destroy(runner_id, region_name=REGION_NAME):
+
+    # delete queue
+    sqs = boto3.resource('sqs', region_name=region_name)
+    queue = sqs.get_queue_by_name(QueueName=runner_id)
+    queue.delete()
+    logger.info('Deleted queue "{}"'.format(runner_id))
+
+    # terminate workers
+    workers = get_workers(runner_id)
+    ec2 = boto3.resource('ec2', region_name=region_name)
+    for instance in ec2.instances.filter(Filters=[{'Name':'ip-address','Values':workers}]):
+        instance.terminate()
+        logger.info('Terminated instance "{}"'.format(instance.instance_id))
+
+    # clean bucket
+    s3 = boto3.resource('s3', region_name=region_name)
+    for bucket in s3.buckets.all():
+        for obj in bucket.objects.all():
+            if obj.key.endswith('.zip'):
+                obj.delete()
+                logger.info('Deleted key "{}"'.format(obj.key))
+            elif obj.key.startswith('_workers/'):
+                obj.delete()
+                logger.info('Deleted key "{}"'.format(obj.key))
+
+
+### LIST #############################################################
+
+def get_runners(region_name=REGION_NAME):
+
+    sqs = boto3.resource('sqs', region_name=region_name)
+    s3 = boto3.resource('s3', region_name=region_name)
+    
+    queues = [os.path.split(q.url)[1] for q in sqs.queues.all()]
+    
+    runners = []
+    for bucket in s3.buckets.all():
+        if bucket.name in queues:
+            runners.append(bucket.name)
+
+    return runners
+
+        
+def get_workers(runner_id, region_name=REGION_NAME, key='_workers/'):
+
+    s3 = boto3.resource('s3', region_name=region_name)
+
+    workers = []
+    for bucket in s3.buckets.all():
+        if bucket.name == runner_id:
+            for obj in bucket.objects.filter(Prefix=key):
+                if obj.key != key:
+                    workers.append(os.path.split(obj.key)[1])
+
+    return workers
+            
+
+### HELPER ###########################################################
+
 def key_exists(s3, runner_id, key):
     
     try:
@@ -373,3 +402,15 @@ def key_exists(s3, runner_id, key):
             raise e
 
     return True
+
+
+def find_root(files):
+    parts = [f.split(os.path.sep) for f in files]
+    ix = [len(set(x))<=1 for x in zip(*parts)].index(False)
+    root = os.path.sep.join(parts[0][:ix])
+    
+    logger.info('Determined root directory: "{}".'.format(root))
+    
+    return root
+
+

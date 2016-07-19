@@ -164,7 +164,7 @@ Options:
     argv = docopt.docopt(adr_destroy.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    return adr.destroy()
+    return adr.destroy(runner_id)
 
     
 def adr_queue():
@@ -234,7 +234,8 @@ Options:
     argv = docopt.docopt(adr_list.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    return json.dumps(adr.get_workers(region_name=argv['--region']), indent=4)
+    for worker in adr.get_workers(runner_id, region_name=argv['--region']):
+        print worker
 
     
 def adr_set():
