@@ -50,7 +50,7 @@ Options:
         elif sys.argv[1] == 'set':
             return adr_set()
         
-    docopt.docopt(adr.__doc__)
+    print adr_cmd.__doc__.strip()
 
 
 def adr_create():
@@ -171,10 +171,10 @@ def adr_queue():
     '''adr_queue : Queue batch
 
 Usage:
-    adr queue <files> [<runner>] [options]
+    adr queue <file>... [<runner>] [options]
 
 Positional arguments:
-    files              Input files to queue
+    file               Input files to queue
     runner             Runner ID
 
 Options:
@@ -186,7 +186,7 @@ Options:
     argv = docopt.docopt(adr_queue.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    return adr.queue()
+    return adr.queue(runner_id, argv['<file>'])
 
     
 def adr_process():

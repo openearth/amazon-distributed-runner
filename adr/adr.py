@@ -138,9 +138,9 @@ def process(runner_id, workingdir='.', region_name=REGION_NAME):
         return False
     
     # download data
-    batchpath = os.path.join(path, batch_id)
+    batchpath = os.path.join(workingdir, batch_id)
     if not os.path.exists(batchpath):
-        download_batch(s3, runner_id, batch_id, path)
+        download_batch(s3, runner_id, batch_id, workingdir)
     
     # run model
     subprocess.call(cmd, cwd=batchpath, shell=True)
@@ -148,7 +148,8 @@ def process(runner_id, workingdir='.', region_name=REGION_NAME):
     # store data
     if message.has_key('Store'):
         store_patterns = message['Store'].split('|')
-        upload_files(s3, runner_id, batch_id, path, include_patterns=store_patterns)
+        upload_files(s3, runner_id, batch_id, workingdir,
+                     include_patterns=store_patterns)
 
     return True
 
@@ -270,13 +271,13 @@ def parse_message(message):
 
 ### QUEUE ############################################################
 
-def queue_batch(runner_id, pattern, region_name=REGION_NAME, command='./run.sh {}',
-                preprocessing=None, postprocessing=None, store_patterns=['\.nc$']):
+def queue(runner_id, files, region_name=REGION_NAME, command='./run.sh {}',
+          preprocessing=None, postprocessing=None, store_patterns=['\.nc$']):
     
     s3 = boto3.resource('s3', region_name=region_name)
     sqs = boto3.resource('sqs', region_name=region_name)
     
-    files = glob.glob(pattern)
+    files = [os.path.abspath(f) for f in files]
     root = find_root(files)
 
     batch_id = upload_batch(s3, runner_id, root)
