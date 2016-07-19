@@ -25,6 +25,7 @@ Usage:
     adr process   Process jobs from queue
     adr list      List available runners
     adr set       Set current runner
+    adr config    Configuration wizard
 
 Options:
     -h, --help         Show this help message and exit
@@ -49,6 +50,8 @@ Options:
             return adr_list()
         elif sys.argv[1] == 'set':
             return adr_set()
+        elif sys.argv[1] == 'config':
+            return adr_config()
         
     print adr_cmd.__doc__.strip()
 
@@ -267,6 +270,34 @@ Options:
         return set_runner(argv['<runner>'])
 
 
+def adr_config():
+    '''adr_config : Configure Amazon Distributed Runner
+
+Usage:
+    adr config [options]
+
+Options:
+    -h, --help         Show this help message and exit
+
+    '''
+
+    i1 = raw_input('AWS Access Key ID [****************P5NQ]: ')
+    i2 = raw_input('AWS Secret Access Key [****************O+LY]: ')
+    i8 = raw_input('Default SSH user [ubuntu]: ')
+    i8 = raw_input('Default SSH password []: ')
+    i8 = raw_input('Default SSH key file []: ')
+    i3 = raw_input('Default region name [eu-central-1]: ')
+    i4 = raw_input('Default output format [json]: ')
+    i5 = raw_input('Default machine instance []: ')
+    i6 = raw_input('Default security group []: ')
+    i7 = raw_input('Default key pair []: ')
+    i8 = raw_input('Default instance type []: ')
+    i8 = raw_input('Default command []: ')
+    i8 = raw_input('Default preprocessing []: ')
+    i8 = raw_input('Default postprocessing []: ')
+    
+### HELPER ###########################################################
+
 def get_runner(runner_id):
     if runner_id is None:
         rcfile = os.path.expanduser(RCFILE)
@@ -292,7 +323,7 @@ def set_runner(runner_id):
             cfg = {}
         cfg['runner'] = runner_id
         with open(rcfile, 'w') as fp:
-            cfg = json.dump(cfg, fp)
+            cfg = json.dump(cfg, fp, indent=4)
 
     return runner_id
 
