@@ -329,6 +329,23 @@ def upload_batch(s3, runner_id, path, exclude_patterns=['\.log$', '\.nc$', '\.py
     return batch_id
             
 
+### DOWNLOAD #########################################################
+
+def download(runner_id, path, region_name=REGION_NAME):
+
+    s3 = boto3.resource('s3', region_name=region_name)
+    for bucket in s3.buckets.all():
+        if bucket.name == runner_id:
+            for obj in bucket.objects.all():
+                if not obj.key.endswith('.zip') and not obj.key.startswith('_'):
+                    fpath, fname = os.path.split(obj.key)
+                    downloadpath = os.path.join(path, fpath)
+                    if not os.path.exists(downloadpath):
+                        os.makedirs(downloadpath)
+                    obj.meta.client.download_file(bucket.name, obj.key, os.path.join(downloadpath, fname))
+                    logger.info('Downloaded "{}" to "{}"'.format(obj.key, downloadpath))
+
+                                
 ### DESTROY ##########################################################
 
 def destroy(runner_id, region_name=REGION_NAME):
@@ -349,13 +366,14 @@ def destroy(runner_id, region_name=REGION_NAME):
     # clean bucket
     s3 = boto3.resource('s3', region_name=region_name)
     for bucket in s3.buckets.all():
-        for obj in bucket.objects.all():
-            if obj.key.endswith('.zip'):
-                obj.delete()
-                logger.info('Deleted key "{}"'.format(obj.key))
-            elif obj.key.startswith('_workers/'):
-                obj.delete()
-                logger.info('Deleted key "{}"'.format(obj.key))
+        if bucket.name == runner_id:
+            for obj in bucket.objects.all():
+                if obj.key.endswith('.zip'):
+                    obj.delete()
+                    logger.info('Deleted key "{}"'.format(obj.key))
+                elif obj.key.startswith('_'):
+                    obj.delete()
+                    logger.info('Deleted key "{}"'.format(obj.key))
 
 
 ### LIST #############################################################

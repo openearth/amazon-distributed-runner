@@ -21,8 +21,9 @@ Usage:
     adr launch    Launch workers
     adr prepare   Prepare workers
     adr destroy   Destroy runner and workers
-    adr queue     Queue job to runner
-    adr process   Process jobs from queue
+    adr queue     Queue batch to runner
+    adr process   Process batches from queue
+    adr download  Download batch results
     adr list      List available runners
     adr set       Set current runner
     adr config    Configuration wizard
@@ -46,6 +47,8 @@ Options:
             return adr_queue()
         elif sys.argv[1] == 'process':
             return adr_process()
+        elif sys.argv[1] == 'download':
+            return adr_download()
         elif sys.argv[1] == 'list':
             return adr_list()
         elif sys.argv[1] == 'set':
@@ -197,7 +200,7 @@ Options:
 
     
 def adr_process():
-    '''adr_process : Process jobs from queue
+    '''adr_process : Process batches from queue
 
 Usage:
     adr process [<runner>] [options]
@@ -221,6 +224,31 @@ Options:
                        region_name=argv['--region'])
 
     
+def adr_download():
+    '''adr_download : Download batch results
+
+Usage:
+    adr download <path> [<runner>] [options]
+
+Positional arguments:
+    path               Download location
+    runner             Runner ID
+
+Options:
+    -h, --help         Show this help message and exit
+    --region=REGION    Amazon region [default: eu-central-1]
+    --verbose=LEVEL    Write logging messages [default: 30]
+
+    '''
+    
+    argv = docopt.docopt(adr_download.__doc__)
+    runner_id = get_runner(argv['<runner>'])
+    set_logger(runner_id, int(argv['--verbose']))
+    return adr.download(runner_id,
+                        argv['<path>'],
+                        region_name=argv['--region'])
+
+
 def adr_list():
     '''adr_list : List available runners and hosts
 
