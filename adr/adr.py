@@ -146,13 +146,15 @@ def process(runner_id, workingdir='.', region_name=REGION_NAME):
         download_batch(s3, runner_id, batch_id, workingdir)
     
     # run model
-    shfile = os.path.join(batchpath, 'run.sh')
-    with open(shfile, 'w') as fp:
+    shfile = 'run.sh'
+    shpath = os.path.join(batchpath, shfile)
+    with open(shpath, 'w') as fp:
         fp.write('#!/bin/bash\n\n')
         fp.write('source ~/.envs/aeolis/bin/activate\n')
         fp.write('{}\n'.format(cmd))
-    os.chmod(shfile, 0744)
-    subprocess.call(shfile, cwd=batchpath, shell=True)
+    os.chmod(shpath, 0744)
+    subprocess.call(['dtach' '-n `mktemp -u ~/aeolis.XXXX`', shfile],
+                    cwd=batchpath, shell=True)
     
     # store data
     if message.has_key('Store'):
