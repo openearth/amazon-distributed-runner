@@ -63,7 +63,7 @@ Options:
     '''
     
     argv = docopt.docopt(adr_create.__doc__)
-    set_logger('adr', argv['--verbose'])
+    set_logger('adr', int(argv['--verbose']))
     runner_id = adr.create()
     set_runner(runner_id)
     return runner_id
@@ -94,7 +94,7 @@ Options:
     
     argv = docopt.docopt(adr_launch.__doc__)
     runner_id = get_runner(argv['<runner>'])
-    set_logger(runner_id, argv['--verbose'])
+    set_logger(runner_id, int(argv['--verbose']))
     workers = adr.launch(runner_id,
                          n=argv['-n'],
                          user=argv['--user'],
@@ -125,7 +125,7 @@ Options:
     
     argv = docopt.docopt(adr_destroy.__doc__)
     runner_id = get_runner(argv['<runner>'])
-    set_logger(runner_id, argv['--verbose'])
+    set_logger(runner_id, int(argv['--verbose']))
     return adr.destroy()
 
     
@@ -147,7 +147,7 @@ Options:
     
     argv = docopt.docopt(adr_queue.__doc__)
     runner_id = get_runner(argv['<runner>'])
-    set_logger(runner_id, argv['--verbose'])
+    set_logger(runner_id, int(argv['--verbose']))
     return adr.queue()
 
     
@@ -168,7 +168,7 @@ Options:
     
     argv = docopt.docopt(adr_process.__doc__)
     runner_id = get_runner(argv['<runner>'])
-    set_logger(runner_id, argv['--verbose'])
+    set_logger(runner_id, int(argv['--verbose']))
     return adr.process(runner_id)
 
     
@@ -189,7 +189,7 @@ Options:
     
     argv = docopt.docopt(adr_list.__doc__)
     runner_id = get_runner(argv['<runner>'])
-    set_logger(runner_id, argv['--verbose'])
+    set_logger(runner_id, int(argv['--verbose']))
     return json.dumps(adr.list_workers(), indent=4)
 
     
@@ -204,7 +204,6 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
-    --verbose=LEVEL    Write logging messages [default: 30]
 
 '''
     
