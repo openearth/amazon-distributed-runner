@@ -179,6 +179,7 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
+    --command=CMD      Shell command [default: aeolis {}]
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
