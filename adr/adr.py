@@ -147,8 +147,6 @@ def process_job(sqs, s3, runner_id, workingdir='.'):
 
     batch_id = message['Batch']
     cmd = message['Command']
-    pre = message['PreProcessing']
-    post = message['PostProcessing']
     
     # download data
     batchpath = os.path.join(workingdir, batch_id)
@@ -160,11 +158,11 @@ def process_job(sqs, s3, runner_id, workingdir='.'):
     shpath = os.path.join(batchpath, shfile)
     with open(shpath, 'w') as fp:
         fp.write('#!/bin/bash\n\n')
-        if pre:
-            fp.write('{}\n'.format(pre))
+        if message.has_key['PreProcessing']:
+            fp.write('{}\n'.format(message['PreProcessing']))
         fp.write('{}\n'.format(cmd))
-        if post:
-            fp.write('{}\n'.format(post))
+        if message.has_key['PostProcessing']:
+            fp.write('{}\n'.format(message['PostProcessing']))
     os.chmod(shpath, 0744)
     subprocess.call('./{}'.format(shfile), #dtach -n `mktemp -u ~/aeolis.XXXX` 
                     cwd=batchpath, shell=True)
