@@ -13,7 +13,7 @@ import fabfile
 REGION_NAME = 'eu-central-1'
 
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 ## CREATE ############################################################
