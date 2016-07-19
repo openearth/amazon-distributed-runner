@@ -8,6 +8,7 @@ import zipfile
 import logging
 import subprocess
 import fabfile
+import botocore.exceptions
 
 
 REGION_NAME = 'eu-central-1'
