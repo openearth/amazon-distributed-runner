@@ -153,7 +153,7 @@ def process(runner_id, workingdir='.', region_name=REGION_NAME):
         fp.write('source ~/.envs/aeolis/bin/activate\n')
         fp.write('{}\n'.format(cmd))
     os.chmod(shpath, 0744)
-    subprocess.call(['dtach' '-n `mktemp -u ~/aeolis.XXXX`', shfile],
+    subprocess.call(['dtach', '-n `mktemp -u ~/aeolis.XXXX`', shfile],
                     cwd=batchpath, shell=True)
     
     # store data
