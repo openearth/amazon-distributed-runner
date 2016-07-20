@@ -141,14 +141,13 @@ Options:
     argv = docopt.docopt(adr_prepare.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    workers = adr.get_workers(region_name=argv['--region'])
-    if workers.has_key(runner_id):
-        adr.prepare_workers(workers[runner_id],
-                            runner_id,
-                            user=argv['--user'],
-                            password=argv['--password'],
-                            key_filename=argv['--key'],
-                            warn_only=True)
+    workers = adr.get_workers(runner_id, region_name=argv['--region'])
+    adr.prepare_workers(workers,
+                        runner_id,
+                        user=argv['--user'],
+                        password=argv['--password'],
+                        key_filename=argv['--key'],
+                        warn_only=True)
 
 
 def adr_destroy():

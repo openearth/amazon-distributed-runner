@@ -55,7 +55,7 @@ def launch(runner_id, n, region_name=REGION_NAME,
     ec2 = boto3.resource('ec2', region_name=region_name)
     s3 = boto3.resource('s3', region_name=region_name)
 
-    workers = launch_workers(ec2, n=n, **kwargs)
+    workers = launch_workers(ec2, runner_id, n=n, **kwargs)
     
     # register workers
     for worker in workers:
@@ -63,13 +63,13 @@ def launch(runner_id, n, region_name=REGION_NAME,
         s3.Object(runner_id, key).put(Body='')
 
     # install and execute queue processor
-    prepare_workers(workers, runner_id,
-                    user=user, password=password, key_filename=key_filename)
+    #prepare_workers(workers, runner_id,
+    #                user=user, password=password, key_filename=key_filename)
 
     return workers
 
 
-def launch_workers(ec2, n=1,
+def launch_workers(ec2, runner_id, n=1,
                    ami='ami-d09b6ebf', asg=['sg-13d17c7b'],
                    akp='Amazon AeoLiS Test Key', ait='m3.medium'):
     
@@ -82,8 +82,13 @@ def launch_workers(ec2, n=1,
     
     # wait until all instances are available
     hosts = []
-    for instance in instances:
+    for i, instance in enumerate(instances):
         instance.wait_until_running()
+
+        name = '{}_{}'.format(runner_id[:7], i)
+        instance.create_tags(Tags=[{'Key':'Name', 'Value':name},
+                                   {'Key':'Runner', 'Value':runner_id}])
+        
         instance.reload()
         hosts.append(instance.public_ip_address)
 
@@ -130,6 +135,7 @@ def process_job(sqs, s3, runner_id, workingdir='.'):
     batchpath = os.path.join(workingdir, batch_id)
     if not os.path.exists(batchpath):
         download_batch(s3, runner_id, batch_id, workingdir)
+        cache_contents(batchpath)
     
     # run model
     shfile = 'run.sh'
@@ -150,6 +156,7 @@ def process_job(sqs, s3, runner_id, workingdir='.'):
         store_patterns = message['Store'].split('|')
         upload_files(s3, runner_id, batch_id, workingdir,
                      include_patterns=store_patterns)
+        restore_contents(batchpath)
 
     return True
 
@@ -432,3 +439,24 @@ def find_root(files):
     return root
 
 
+def cache_contents(path):
+    cachepath = os.path.join(path, '.contents')
+    with open(cachepath, 'w') as fp:
+        for root, dirs, files in os.walk(path):
+            for fname in files:
+                fpath = os.path.abspath(os.path.join(root, fname))
+                fp.write('{}\n'.format(fpath))
+
+    return cachepath
+
+
+def restore_contents(path):
+    cachepath = os.path.join(path, '.contents')
+    if os.path.exists(cachepath):
+        with open(cachepath, 'r') as fp:
+            cache = [l.strip() for l in fp.readlines()]
+        for root, dirs, files in os.walk(path):
+            for fname in files:
+                fpath = os.path.abspath(os.path.join(root, fname))
+                if fpath not in cache:
+                    os.unlink(fpath)
