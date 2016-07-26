@@ -11,6 +11,7 @@ setup(
         'boto3',
         'fabric',
         'docopt',
+        'configparser',
     ],
     #setup_requires=[
     #    'sphinx',

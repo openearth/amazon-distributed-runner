@@ -3,6 +3,9 @@ import json
 import configparser
 
 
+AWS_CREDENTIALS_FILE = os.path.expanduser('~/.aws/credentials')
+AWS_CONFIG_FILE = os.path.expanduser('~/.aws/config')
+
 JSON_INDENT = 4
 JSON_FILE = os.path.expanduser('~/.aws/adr.json')
 JSON_DEFAULT = {
@@ -16,7 +19,7 @@ JSON_DEFAULT = {
             'region' : '',
             'machine_instance' : '',
             'instance_type' : '',
-            'security_group' : '',
+            'security_groups' : [],
             'key_pair' : '',
             'output' : 'json',
         },
@@ -36,11 +39,11 @@ JSON_DEFAULT = {
 
 def load_config(*keys):
 
+    cfg = JSON_DEFAULT.copy()
+    
     if os.path.exists(JSON_FILE):
         with open(JSON_FILE, 'r') as fp:
-            cfg = json.load(fp)
-    else:
-        cfg = JSON_DEFAULT.copy()
+            cfg.update(json.load(fp))
 
     return get_item(cfg, keys)
 
@@ -60,22 +63,28 @@ def write_config(cfg):
     with open(JSON_FILE, 'w') as fp:
         json.dump(cfg, fp, indent=JSON_INDENT)
 
+    os.chmod(JSON_FILE, 0600)
+
 
 def write_aws_config(cfg):
 
     ini = configparser.ConfigParser()
-    ini['default'] = cfg['aws']['credentials']
+    ini['default'] = {'aws_{}'.format(k):v for k, v in cfg['aws']['credentials'].iteritems()}
 
-    with open(os.path.expanduser('~/.aws/credentials'), 'w') as fp:
+    with open(AWS_CREDENTIALS_FILE, 'w') as fp:
         ini.write(fp)
                          
-    ini = configparser.ConfigParser()
-    ini['default'] = cfg['aws']['configuration']
+    os.chmod(AWS_CREDENTIALS_FILE, 0600)
 
-    with open(os.path.expanduser('~/.aws/config'), 'w') as fp:
+    ini = configparser.ConfigParser()
+    ini['default'] = {k:','.join(v) if type(v) is list else v for k, v in cfg['aws']['configuration'].iteritems()}
+
+    with open(AWS_CONFIG_FILE, 'w') as fp:
         ini.write(fp)
 
+    os.chmod(AWS_CONFIG_FILE, 0600)
 
+    
 def wizard():
 
     cfg = load_config()
@@ -87,7 +96,7 @@ def wizard():
     cfg = ask_question(cfg, ('aws', 'configuration', 'region'), 'Default region name')
     cfg = ask_question(cfg, ('aws', 'configuration', 'instance_type'), 'Default instance type')
     cfg = ask_question(cfg, ('aws', 'configuration', 'machine_instance'), 'Default machine instance')
-    cfg = ask_question(cfg, ('aws', 'configuration', 'security_group'), 'Default security group')
+    cfg = ask_question(cfg, ('aws', 'configuration', 'security_groups'), 'Default security groups', split=True)
     cfg = ask_question(cfg, ('aws', 'configuration', 'key_pair'), 'Default key pair')
     cfg = ask_question(cfg, ('command', 'command'), 'Default command')
     cfg = ask_question(cfg, ('command', 'preprocessing'), 'Default preprocessing')
@@ -99,21 +108,16 @@ def wizard():
         write_aws_config(cfg)
 
 
-def ask_question(cfg, keys, display, masked=False):
+def ask_question(cfg, keys, display, masked=False, split=False):
 
     val = get_item(cfg, keys)
-
-    if masked:
-        n1 = int(.8 * len(val))
-        n2 = len(val) - n1
-        val_dsp = '{}{}'.format('*' * n1, val[-n2:])
-    else:
-        val_dsp = val
-        
-    dsp = '{} [{}]: '.format(display, val_dsp)
+    val = disp_item(val, masked=masked)
+    dsp = '{} [{}]: '.format(display, val)
+    
     i = raw_input(dsp)
-
     if len(i) > 0:
+        if split:
+            i = [ii.strip() for ii in i.split(',')]
         cfg = set_item(cfg, keys, i)
 
     return cfg
@@ -125,6 +129,7 @@ def get_item(cfg, keys):
             cfg = cfg[k]
         else:
             return None
+
     return cfg
 
 
@@ -137,3 +142,18 @@ def set_item(cfg, keys, val):
         cfg = val
         
     return cfg
+
+
+def disp_item(val, masked=False):
+
+    if type(val) is list:
+        val = ','.join(val)
+        
+    if masked:
+        n = len(val)
+        n1 = int(.8 * n)
+        n2 = n - n1
+        val = '{}{}'.format('*' * n1, val[-n2:])
+
+    return val
+        

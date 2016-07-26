@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import json
 import docopt
@@ -17,15 +18,15 @@ Usage:
     adr create    Create runner
     adr launch    Launch workers
     adr prepare   Prepare workers
-    adr start     Start workers (not implemented)
-    adr stop      Stop workers (not implemented)
+    adr start     Start workers
+    adr stop      Stop workers
     adr destroy   Destroy runner and workers
     adr queue     Queue batch to runner
     adr process   Process batches from queue
     adr download  Download batch results
     adr list      List available runners
     adr set       Set current runner
-    adr config    Configuration wizard (not implemented)
+    adr config    Configuration wizard
 
 Options:
     -h, --help         Show this help message and exit
@@ -70,12 +71,12 @@ Usage:
     
 Options:
     -h, --help         Show this help message and exit
-    --region=REGION    Amazon region [default: eu-central-1]
+    --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
-    argv = docopt.docopt(adr_create.__doc__)
+    argv = set_defaults(adr_create.__doc__)
     set_logger('adr', int(argv['--verbose']))
     runner_id = adr.create(region_name=argv['--region'])
     return set_runner(runner_id)
@@ -93,27 +94,24 @@ Positional arguments:
 Options:
     -h, --help         Show this help message and exit
     -n N               Number of workers [default: 1]
-    --region=REGION    Amazon region [default: eu-central-1]
-    --user=USER        SSH username
-    --password=PW      SSH password
-    --key=KEY          SSH key filename
-    --ami=AMI          Amazon Machine Instance [default: ami-d09b6ebf]
-    --asg=SG           Comma-separated list of Amazon Security Groups [default: sg-13d17c7b]
-    --akp=KEY          Amazon Key Pair [default: Amazon AeoLiS Test Key]
-    --ait=TYPE         Amazon Instance Type [default: t2.micro]
+    --region=REGION    Amazon region
+    --ami=AMI          Amazon Machine Instance
+    --asg=SG           Comma-separated list of Amazon Security Groups
+    --akp=KEY          Amazon Key Pair
+    --ait=TYPE         Amazon Instance Type
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
-    argv = docopt.docopt(adr_launch.__doc__)
+    argv = set_defaults(adr_launch.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     workers = adr.launch(runner_id,
                          n=argv['-n'],
                          region_name=argv['--region'],
-                         user=argv['--user'],
-                         password=argv['--password'],
-                         key_filename=argv['--key'],
+                         #user=argv['--user'],
+                         #password=argv['--password'],
+                         #key_filename=argv['--key'],
                          ami=argv['--ami'],
                          asg=argv['--asg'].split(','),
                          akp=argv['--akp'],
@@ -133,15 +131,15 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
-    --user=USER        SSH username [default: ubuntu]
+    --user=USER        SSH username
     --password=PW      SSH password
     --key=KEY          SSH key filename
-    --region=REGION    Amazon region [default: eu-central-1]
+    --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
-    argv = docopt.docopt(adr_prepare.__doc__)
+    argv = set_defaults(adr_prepare.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     adr.prepare(runner_id,
@@ -163,12 +161,12 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
-    --region=REGION    Amazon region [default: eu-central-1]
+    --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
-    argv = docopt.docopt(adr_prepare.__doc__)
+    argv = set_defaults(adr_start.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     adr.start(runner_id,
@@ -186,12 +184,12 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
-    --region=REGION    Amazon region [default: eu-central-1]
+    --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
-    argv = docopt.docopt(adr_prepare.__doc__)
+    argv = set_defaults(adr_stop.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     adr.stop(runner_id,
@@ -213,7 +211,7 @@ Options:
 
     '''
     
-    argv = docopt.docopt(adr_destroy.__doc__)
+    argv = set_defaults(adr_destroy.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     adr.destroy(runner_id)
@@ -235,12 +233,12 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
-    --command=CMD      Shell command [default: aeolis {}]
+    --command=CMD      Shell command
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
-    argv = docopt.docopt(adr_queue.__doc__)
+    argv = set_defaults(adr_queue.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     return adr.queue(runner_id, argv['<file>'])
@@ -258,12 +256,12 @@ Positional arguments:
 Options:
     -h, --help         Show this help message and exit
     --workingdir=PATH  Working directory [default: .]
-    --region=REGION    Amazon region [default: eu-central-1]
+    --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
-    argv = docopt.docopt(adr_process.__doc__)
+    argv = set_defaults(adr_process.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     return adr.process(runner_id,
@@ -283,12 +281,12 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
-    --region=REGION    Amazon region [default: eu-central-1]
+    --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
     
-    argv = docopt.docopt(adr_download.__doc__)
+    argv = set_defaults(adr_download.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     return adr.download(runner_id,
@@ -307,12 +305,12 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
-    --region=REGION    Amazon region [default: eu-central-1]
+    --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
     
     '''
     
-    argv = docopt.docopt(adr_list.__doc__)
+    argv = set_defaults(adr_list.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     for worker in adr.get_workers(runner_id, region_name=argv['--region']):
@@ -333,7 +331,7 @@ Options:
 
 '''
     
-    argv = docopt.docopt(adr_set.__doc__)
+    argv = set_defaults(adr_set.__doc__)
     if argv['<runner>'] is None:
         runner_id = get_runner(argv['<runner>'])
         for runner in adr.get_runners():
@@ -356,7 +354,7 @@ Options:
 
     '''
 
-    argv = docopt.docopt(adr_config.__doc__)
+    argv = set_defaults(adr_config.__doc__)
     config.wizard()
 
     
@@ -377,6 +375,30 @@ def set_runner(runner_id):
         config.update_config('runner', runner_id)
         
     return runner_id
+
+
+def set_defaults(docs):
+
+    cfg = config.load_config()
+    defaults = {
+        '--region' : config.get_item(cfg, ('aws', 'configuration', 'region')),
+        '--user' : config.get_item(cfg, ('ssh', 'user')),
+        #'--password' : config.get_item(cfg, ('ssh', 'password')),
+        '--key' : config.get_item(cfg, ('ssh', 'key_filename')),
+        '--ait' : config.get_item(cfg, ('aws', 'configuration', 'instance_type')),
+        '--ami' : config.get_item(cfg, ('aws', 'configuration', 'machine_instance')),
+        '--asg' : ','.join(config.get_item(cfg, ('aws', 'configuration', 'security_groups'))),
+        '--akp' : config.get_item(cfg, ('aws', 'configuration', 'key_pair')),
+        '--command' : config.get_item(cfg, ('command', 'command')),
+    }
+
+    for k, v in defaults.iteritems():
+        if v:
+            docs = re.sub(r'^(\s*{}=[A-Z]+\s+.+)\s*$'.format(k),
+                          r'\1 [default: {}]'.format(v),
+                          docs, flags=re.MULTILINE)
+
+    return docopt.docopt(docs)
 
 
 def set_logger(name, verbosity=30):

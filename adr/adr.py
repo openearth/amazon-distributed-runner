@@ -129,7 +129,7 @@ def prepare(runner_id, region_name=REGION_NAME,
             user='ubuntu', password=None, key_filename=None,
             warn_only=False, timeout=600):
     
-    workers = adr.get_workers(runner_id, region_name=region_name)
+    workers = get_workers(runner_id, region_name=region_name)
 
     with fabfile.settings(user=user, password=password, key_filename=key_filename,
                           hosts=workers, warn_only=warn_only,
@@ -145,7 +145,7 @@ def register_workers(s3, runner_id, workers, key='_workers/'):
         workers = [workers]
 
     for worker in workers:
-        s3.Object(runner_id, ''.join(key, worker)).put(Body='')
+        s3.Object(runner_id, ''.join((key, worker))).put(Body='')
 
         
 def deregister_workers(s3, runner_id, workers, key='_workers/'):
@@ -154,7 +154,7 @@ def deregister_workers(s3, runner_id, workers, key='_workers/'):
         workers = [workers]
 
     for worker in workers:
-        s3.Object(runner_id, ''.join(key, worker)).delete(Body='')
+        s3.Object(runner_id, ''.join((key, worker))).delete()
 
 
 ### PROCESS ##########################################################
@@ -513,9 +513,8 @@ def restore_contents(path):
 def iterate_workers(runner_id, region_name=REGION_NAME):
 
     ec2 = boto3.resource('ec2', region_name=region_name)
-    workers = get_workers(runner_id, region_name=region_name)
     
-    for instance in ec2.instances.filter(Filters=[{'Name':'ip-address','Values':workers}]):
+    for instance in ec2.instances.all():
         if runner_id in [t['Value'] for t in instance.tags if t['Key'] == 'Runner']:
             yield instance
 
@@ -523,7 +522,7 @@ def iterate_workers(runner_id, region_name=REGION_NAME):
 def isiterable(lst):
 
     try:
-        iterator = iter(list)
+        iterator = iter(lst)
     except TypeError:
         return False
 
