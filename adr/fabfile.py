@@ -5,6 +5,29 @@ from fabric.contrib.files import *
 
 
 def runv(cmd, env='~/.envs/adr', socket=None):
+     '''Run command in virtual environment
+
+     Parameters
+     ----------
+     cmd : str
+         Shell command
+     env : str
+         Path to virtual environent
+     socket : str, optional
+         Name of socket for running command detached
+
+     Returns
+     -------
+     str
+         Command return value (if not detached)
+
+     Notes
+     -----
+     Detachting the process is done with the ``dtach`` command, which
+     should be available at the node.
+
+     '''
+     
      cmd = 'source {}/bin/activate && {}'.format(env, cmd)
      if socket is not None:
           fp = tempfile.NamedTemporaryFile(suffix='.sh', delete=False)
@@ -19,23 +42,55 @@ def runv(cmd, env='~/.envs/adr', socket=None):
           return run(cmd)
 
 
-#@parallel
 @task
+@parallel
 def stop():
+     '''Stop all ADR instances'''
 
      run('pkill adr', warn_only=True)
 
 
-#@parallel
 @task
+@parallel
 def start(runner_id):
+     '''Start ADR instance on specific runner
+
+     ADR instance is started detached under socket ``adr`` and in
+     virtual environment ``adr``.
+
+     Parameters
+     ----------
+     runner_id : str
+         Runner ID
+
+     '''
 
      return runv('adr process {}'.format(runner_id), socket='adr')
 
 
-#@parallel
 @task
+@parallel
 def install(required_packages=['boto3', 'fabric', 'docopt']):
+     '''Prepare node for processing queued ADR jobs
+
+     Installs the following packages:
+
+     * dtach
+     * virtualenv
+     * boto3
+     * fabric
+     * docopt
+     * amazon-dsitributed-runner
+
+     Creates a virtual environment ``adr`` and copies the local AWS
+     credentials.
+
+     Parameters
+     ----------
+     required_packages : list, optional
+         Additional Python packages to install
+
+     '''
 
      # make sure dtach is installed
      if not run('which dtach'):
