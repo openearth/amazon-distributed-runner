@@ -39,12 +39,6 @@ Source code
 
    sourcecode
 
-Commands
---------
-
-.. automodule:: adr.cmd
-                :members:
-
 Indices and tables
 ==================
 

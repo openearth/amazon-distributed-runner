@@ -1,7 +1,7 @@
 Source code
 ===========
 
-ADR
+adr
 ---
 
 .. automodule:: adr.adr
@@ -21,4 +21,10 @@ config
 .. automodule:: adr.config
                 :members:
                 :undoc-members:
-                   
+
+cmd
+---
+
+.. automodule:: adr.cmd
+                :members:
+
