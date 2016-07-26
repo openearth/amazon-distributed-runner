@@ -33,7 +33,6 @@ sys.path.insert(0, os.path.abspath('../adr'))
 extensions = [
     'sphinx.ext.autodoc',
     'sphinxcontrib.napoleon',
-    'sphinx.ext.doctest',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
 ]
