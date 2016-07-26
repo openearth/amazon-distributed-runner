@@ -266,7 +266,7 @@ def prepare(runner_id, region_name=REGION_NAME,
 
     Install the Amazon Distributed Runner to all workers and start
     processing the queue. Installation procedure is defined in
-    :mod:`adr.fabfile`, which can be used as input to ``fab`` as well.
+    :mod:`fabfile`, which can be used as input to ``fab`` as well.
 
     Parameters
     ----------
@@ -287,7 +287,7 @@ def prepare(runner_id, region_name=REGION_NAME,
 
     See Also
     --------
-    :mod:`adr.fabfile`
+    :mod:`fabfile`
 
     '''
     

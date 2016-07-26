@@ -4,27 +4,27 @@ Source code
 adr
 ---
 
-.. automodule:: adr.adr
+.. automodule:: adr
                 :members:
                 :undoc-members:
        
 fabfile
 -------
 
-.. automodule:: adr.fabfile
+.. automodule:: fabfile
                 :members:
                 :undoc-members:
 
 config
 ------
 
-.. automodule:: adr.config
+.. automodule:: config
                 :members:
                 :undoc-members:
 
-cmd
----
+console
+-------
 
-.. automodule:: adr.cmd
+.. automodule:: console
                 :members:
 
