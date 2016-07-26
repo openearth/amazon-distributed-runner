@@ -17,7 +17,7 @@ JSON_DEFAULT = {
         },
         'configuration' : {
             'region' : '',
-            'machine_instance' : '',
+            'machine_image' : '',
             'instance_type' : '',
             'security_groups' : [],
             'key_pair' : '',
@@ -95,7 +95,7 @@ def wizard():
     cfg = ask_question(cfg, ('ssh', 'key_filename'), 'Default SSH key file')
     cfg = ask_question(cfg, ('aws', 'configuration', 'region'), 'Default region name')
     cfg = ask_question(cfg, ('aws', 'configuration', 'instance_type'), 'Default instance type')
-    cfg = ask_question(cfg, ('aws', 'configuration', 'machine_instance'), 'Default machine instance')
+    cfg = ask_question(cfg, ('aws', 'configuration', 'machine_image'), 'Default machine image')
     cfg = ask_question(cfg, ('aws', 'configuration', 'security_groups'), 'Default security groups', split=True)
     cfg = ask_question(cfg, ('aws', 'configuration', 'key_pair'), 'Default key pair')
     cfg = ask_question(cfg, ('command', 'command'), 'Default command')

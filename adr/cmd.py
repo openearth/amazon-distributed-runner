@@ -95,7 +95,7 @@ Options:
     -h, --help         Show this help message and exit
     -n N               Number of workers [default: 1]
     --region=REGION    Amazon region
-    --ami=AMI          Amazon Machine Instance
+    --ami=AMI          Amazon Machine Image (AMI)
     --asg=SG           Comma-separated list of Amazon Security Groups
     --akp=KEY          Amazon Key Pair
     --ait=TYPE         Amazon Instance Type
@@ -386,7 +386,7 @@ def set_defaults(docs):
         #'--password' : config.get_item(cfg, ('ssh', 'password')),
         '--key' : config.get_item(cfg, ('ssh', 'key_filename')),
         '--ait' : config.get_item(cfg, ('aws', 'configuration', 'instance_type')),
-        '--ami' : config.get_item(cfg, ('aws', 'configuration', 'machine_instance')),
+        '--ami' : config.get_item(cfg, ('aws', 'configuration', 'machine_image')),
         '--asg' : ','.join(config.get_item(cfg, ('aws', 'configuration', 'security_groups'))),
         '--akp' : config.get_item(cfg, ('aws', 'configuration', 'key_pair')),
         '--command' : config.get_item(cfg, ('command', 'command')),
