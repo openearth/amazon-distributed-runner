@@ -3,10 +3,7 @@ import sys
 import json
 import docopt
 import logging
-import adr
-
-
-RCFILE = '~/.adrrc'
+import adr, config
 
 
 def adr_cmd():
@@ -20,13 +17,15 @@ Usage:
     adr create    Create runner
     adr launch    Launch workers
     adr prepare   Prepare workers
+    adr start     Start workers (not implemented)
+    adr stop      Stop workers (not implemented)
     adr destroy   Destroy runner and workers
     adr queue     Queue batch to runner
     adr process   Process batches from queue
     adr download  Download batch results
     adr list      List available runners
     adr set       Set current runner
-    adr config    Configuration wizard
+    adr config    Configuration wizard (not implemented)
 
 Options:
     -h, --help         Show this help message and exit
@@ -41,6 +40,10 @@ Options:
             return adr_launch()
         elif sys.argv[1] == 'prepare':
             return adr_prepare()
+        elif sys.argv[1] == 'start':
+            return adr_start()
+        elif sys.argv[1] == 'stop':
+            return adr_stop()
         elif sys.argv[1] == 'destroy':
             return adr_destroy()
         elif sys.argv[1] == 'queue':
@@ -141,15 +144,60 @@ Options:
     argv = docopt.docopt(adr_prepare.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    workers = adr.get_workers(runner_id, region_name=argv['--region'])
-    adr.prepare_workers(workers,
-                        runner_id,
-                        user=argv['--user'],
-                        password=argv['--password'],
-                        key_filename=argv['--key'],
-                        warn_only=True)
+    adr.prepare(runner_id,
+                region_name=argv['--region'],
+                user=argv['--user'],
+                password=argv['--password'],
+                key_filename=argv['--key'],
+                warn_only=True)
 
 
+def adr_start():
+    '''adr_start : Start workers
+
+Usage:
+    adr start [<runner>] [options]
+    
+Positional arguments:
+    runner             Runner ID
+
+Options:
+    -h, --help         Show this help message and exit
+    --region=REGION    Amazon region [default: eu-central-1]
+    --verbose=LEVEL    Write logging messages [default: 30]
+
+    '''
+    
+    argv = docopt.docopt(adr_prepare.__doc__)
+    runner_id = get_runner(argv['<runner>'])
+    set_logger(runner_id, int(argv['--verbose']))
+    adr.start(runner_id,
+              region_name=argv['--region'])
+
+
+def adr_stop():
+    '''adr_stop : Stop workers
+
+Usage:
+    adr stop [<runner>] [options]
+    
+Positional arguments:
+    runner             Runner ID
+
+Options:
+    -h, --help         Show this help message and exit
+    --region=REGION    Amazon region [default: eu-central-1]
+    --verbose=LEVEL    Write logging messages [default: 30]
+
+    '''
+    
+    argv = docopt.docopt(adr_prepare.__doc__)
+    runner_id = get_runner(argv['<runner>'])
+    set_logger(runner_id, int(argv['--verbose']))
+    adr.stop(runner_id,
+             region_name=argv['--region'])
+
+    
 def adr_destroy():
     '''adr_destroy : Destroy runner and workers
 
@@ -308,31 +356,15 @@ Options:
 
     '''
 
-    i1 = raw_input('AWS Access Key ID [****************P5NQ]: ')
-    i2 = raw_input('AWS Secret Access Key [****************O+LY]: ')
-    i8 = raw_input('Default SSH user [ubuntu]: ')
-    i8 = raw_input('Default SSH password []: ')
-    i8 = raw_input('Default SSH key file []: ')
-    i3 = raw_input('Default region name [eu-central-1]: ')
-    i4 = raw_input('Default output format [json]: ')
-    i5 = raw_input('Default machine instance []: ')
-    i6 = raw_input('Default security group []: ')
-    i7 = raw_input('Default key pair []: ')
-    i8 = raw_input('Default instance type []: ')
-    i8 = raw_input('Default command []: ')
-    i8 = raw_input('Default preprocessing []: ')
-    i8 = raw_input('Default postprocessing []: ')
+    argv = docopt.docopt(adr_config.__doc__)
+    config.wizard()
+
     
 ### HELPER ###########################################################
 
 def get_runner(runner_id):
     if runner_id is None:
-        rcfile = os.path.expanduser(RCFILE)
-        if os.path.exists(rcfile):
-            with open(rcfile, 'r') as fp:
-                cfg = json.load(fp)
-                if cfg.has_key('runner'):
-                    runner_id = cfg['runner']
+        runner_id = config.load_config('runner')
 
     if runner_id is None:
         raise ValueError('Please specify runner ID')
@@ -342,16 +374,8 @@ def get_runner(runner_id):
 
 def set_runner(runner_id):
     if runner_id is not None:
-        rcfile = os.path.expanduser(RCFILE)
-        if os.path.exists(rcfile):
-            with open(rcfile, 'r') as fp:
-                cfg = json.load(fp)
-        else:
-            cfg = {}
-        cfg['runner'] = runner_id
-        with open(rcfile, 'w') as fp:
-            cfg = json.dump(cfg, fp, indent=4)
-
+        config.update_config('runner', runner_id)
+        
     return runner_id
 
 

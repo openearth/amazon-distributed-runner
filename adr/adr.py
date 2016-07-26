@@ -56,12 +56,8 @@ def launch(runner_id, n, region_name=REGION_NAME,
     s3 = boto3.resource('s3', region_name=region_name)
 
     workers = launch_workers(ec2, runner_id, n=n, **kwargs)
+    register_workers(s3, runner_id, workers)
     
-    # register workers
-    for worker in workers:
-        key = '_workers/{}'.format(worker)
-        s3.Object(runner_id, key).put(Body='')
-
     # install and execute queue processor
     #prepare_workers(workers, runner_id,
     #                user=user, password=password, key_filename=key_filename)
@@ -92,12 +88,48 @@ def launch_workers(ec2, runner_id, n=1,
         instance.reload()
         hosts.append(instance.public_ip_address)
 
+        logger.info('Launched instance "{}"'.format(instance.instance_id))
+
     return list(set(hosts))
 
 
-def prepare_workers(workers, runner_id,
-                    user='ubuntu', password=None, key_filename=None,
-                    warn_only=False, timeout=600):
+def start(runner_id, region_name=REGION_NAME):
+
+    s3 = boto3.resource('s3', region_name=region_name)
+    
+    for instance in iterate_workers(runner_id, region_name=region_name):
+        if instance.state['Name'] == 'stopped':
+            instance.start()
+
+    for instance in iterate_workers(runner_id, region_name=region_name):
+        instance.wait_until_running()
+        instance.reload()
+
+        logger.info('Started instance "{}"'.format(instance.instance_id))
+
+        # register worker
+        register_workers(s3, runner_id, [instance.public_ip_address])
+
+
+def stop(runner_id, region_name=REGION_NAME):
+
+    s3 = boto3.resource('s3', region_name=region_name)
+    
+    for instance in iterate_workers(runner_id, region_name=region_name):
+        if instance.state['Name'] == 'running':
+
+            # deregister worker
+            deregister_workers(s3, runner_id, [instance.public_ip_address])
+
+            instance.stop()
+            logger.info('Stopped instance "{}"'.format(instance.instance_id))
+
+
+def prepare(runner_id, region_name=REGION_NAME,
+            user='ubuntu', password=None, key_filename=None,
+            warn_only=False, timeout=600):
+    
+    workers = adr.get_workers(runner_id, region_name=region_name)
 
     with fabfile.settings(user=user, password=password, key_filename=key_filename,
                           hosts=workers, warn_only=warn_only,
@@ -105,6 +137,24 @@ def prepare_workers(workers, runner_id,
         fabfile.execute(fabfile.install)
         fabfile.execute(fabfile.stop)
         fabfile.execute(fabfile.start, runner_id=runner_id)
+
+
+def register_workers(s3, runner_id, workers, key='_workers/'):
+
+    if not isiterable(workers):
+        workers = [workers]
+
+    for worker in workers:
+        s3.Object(runner_id, ''.join(key, worker)).put(Body='')
+
+        
+def deregister_workers(s3, runner_id, workers, key='_workers/'):
+
+    if not isiterable(workers):
+        workers = [workers]
+
+    for worker in workers:
+        s3.Object(runner_id, ''.join(key, worker)).delete(Body='')
 
 
 ### PROCESS ##########################################################
@@ -364,9 +414,7 @@ def destroy(runner_id, region_name=REGION_NAME):
     logger.info('Deleted queue "{}"'.format(runner_id))
 
     # terminate workers
-    workers = get_workers(runner_id)
-    ec2 = boto3.resource('ec2', region_name=region_name)
-    for instance in ec2.instances.filter(Filters=[{'Name':'ip-address','Values':workers}]):
+    for instance in iterate_workers(runner_id, region_name=region_name):
         instance.terminate()
         logger.info('Terminated instance "{}"'.format(instance.instance_id))
 
@@ -460,3 +508,23 @@ def restore_contents(path):
                 fpath = os.path.abspath(os.path.join(root, fname))
                 if fpath not in cache:
                     os.unlink(fpath)
+
+
+def iterate_workers(runner_id, region_name=REGION_NAME):
+
+    ec2 = boto3.resource('ec2', region_name=region_name)
+    workers = get_workers(runner_id, region_name=region_name)
+    
+    for instance in ec2.instances.filter(Filters=[{'Name':'ip-address','Values':workers}]):
+        if runner_id in [t['Value'] for t in instance.tags if t['Key'] == 'Runner']:
+            yield instance
+
+
+def isiterable(lst):
+
+    try:
+        iterator = iter(list)
+    except TypeError:
+        return False
+
+    return True
