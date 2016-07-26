@@ -7,7 +7,7 @@ import logging
 import adr, config
 
 
-def adr_cmd():
+def adr_console():
     '''adr : Amazon Distributed Runner
 
 Creates a queue for handling batches, launches workers to process
@@ -60,7 +60,7 @@ Options:
         elif sys.argv[1] == 'config':
             return adr_config()
         
-    print adr_cmd.__doc__.strip()
+    print adr_console.__doc__.strip()
 
 
 def adr_create():
