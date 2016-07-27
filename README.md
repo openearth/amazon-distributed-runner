@@ -6,13 +6,13 @@ Full documentation can be found at http://adr.readthedocs.io/
 
 ## Examples
 
-.. code::
-
-  adr config
-  adr create
-  adr launch -n 5
-  adr prepare
-  adr queue ~/GitHub/aeolis-models/nickling1995/nickling1995_*.txt
-  adr queue ~/GitHub/aeolis-models/dong2004/dong2004_*.txt
-  adr download ~/Downloads/
-  adr destroy
+```
+adr config
+adr create
+adr launch -n 5
+adr prepare
+adr queue ~/GitHub/aeolis-models/nickling1995/nickling1995_*.txt
+adr queue ~/GitHub/aeolis-models/dong2004/dong2004_*.txt
+adr download ~/Downloads/
+adr destroy
+```
