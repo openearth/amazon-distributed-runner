@@ -43,7 +43,7 @@ def runv(cmd, env='~/.envs/adr', socket=None):
 
 
 @task
-@parallel
+#@parallel
 def stop():
      '''Stop all ADR instances'''
 
@@ -51,7 +51,7 @@ def stop():
 
 
 @task
-@parallel
+#@parallel
 def start(runner_id):
      '''Start ADR instance on specific runner
 
@@ -69,7 +69,7 @@ def start(runner_id):
 
 
 @task
-@parallel
+#@parallel
 def install(required_packages=['boto3', 'fabric', 'docopt']):
      '''Prepare node for processing queued ADR jobs
 

@@ -245,9 +245,7 @@ def stop(runner_id, region_name=REGION_NAME):
 
     '''
     
-    s3 = boto3.resourc
-
-    e('s3', region_name=region_name)
+    s3 = boto3.resource('s3', region_name=region_name)
     
     for instance in iterate_workers(runner_id, region_name=region_name):
         if instance.state['Name'] == 'running':
@@ -576,9 +574,7 @@ def download_batch(s3, runner_id, batch_id, path):
     
     s3.Object(runner_id, zfile).download_file(zpath)
     
-    logger.inf
-
-    o('Downloaded "{}" from bucket "{}".'.format(zfile, runner_id))
+    logger.info('Downloaded "{}" from bucket "{}".'.format(zfile, runner_id))
     
     if zipfile.is_zipfile(zpath):
         with zipfile.ZipFile(zpath, mode='r') as zh:
@@ -764,9 +760,7 @@ def upload_batch(s3, runner_id, path, exclude_patterns=['\.log$', '\.nc$', '\.py
     
     batch_id = str(uuid.uuid4())
 
-    logger.inf
-
-    o('Creating batch "{}"...'.format(batch_id))
+    logger.info('Creating batch "{}"...'.format(batch_id))
     
     zfile = '{}.zip'.format(batch_id)
     zpath = os.path.abspath(os.path.join(path, '..', zfile))
@@ -787,9 +781,7 @@ def upload_batch(s3, runner_id, path, exclude_patterns=['\.log$', '\.nc$', '\.py
         else:
             zh.write(path, os.path.join(batch_id, os.path.split(path)[1]))
 
-    logger.inf
-
-    o('Created "{}".'.format(zpath))
+    logger.info('Created "{}".'.format(zpath))
     
     s3.Object(runner_id, zfile).upload_file(zpath)
     
