@@ -195,7 +195,7 @@ def launch_workers(ec2, runner_id, n=1,
     return list(set(hosts))
 
 
-def start(runner_id, region_name=REGION_NAME):
+def start(runner_id, region_name=REGION_NAME, hosts=None):
     '''Start stopped workers for specific runner
 
     Parameters
@@ -204,6 +204,8 @@ def start(runner_id, region_name=REGION_NAME):
         Runner ID
     region_name : str, optional
         Amazon region identifier
+    hosts : list, optional
+        List of specific hosts to start
 
     See Also
     --------
@@ -214,11 +216,11 @@ def start(runner_id, region_name=REGION_NAME):
 
     s3 = boto3.resource('s3', region_name=region_name)
     
-    for instance in iterate_workers(runner_id, region_name=region_name):
+    for instance in iterate_workers(runner_id, region_name=region_name, hosts=hosts):
         if instance.state['Name'] == 'stopped':
             instance.start()
 
-    for instance in iterate_workers(runner_id, region_name=region_name):
+    for instance in iterate_workers(runner_id, region_name=region_name, hosts=hosts):
         instance.wait_until_running()
         instance.reload()
 
@@ -228,7 +230,7 @@ def start(runner_id, region_name=REGION_NAME):
         register_workers(s3, runner_id, [instance.public_ip_address])
 
 
-def stop(runner_id, region_name=REGION_NAME):
+def stop(runner_id, region_name=REGION_NAME, hosts=None):
     '''Stop running workers for specific runner
 
     Parameters
@@ -237,6 +239,8 @@ def stop(runner_id, region_name=REGION_NAME):
         Runner ID
     region_name : str, optional
         Amazon region identifier
+    hosts : list, optional
+        List of specific hosts to stop
 
     See Also
     --------
@@ -247,7 +251,7 @@ def stop(runner_id, region_name=REGION_NAME):
     
     s3 = boto3.resource('s3', region_name=region_name)
     
-    for instance in iterate_workers(runner_id, region_name=region_name):
+    for instance in iterate_workers(runner_id, region_name=region_name, hosts=hosts):
         if instance.state['Name'] == 'running':
 
             # deregister worker
@@ -257,7 +261,7 @@ def stop(runner_id, region_name=REGION_NAME):
             logger.info('Stopped instance "{}"'.format(instance.instance_id))
 
 
-def prepare(runner_id, region_name=REGION_NAME,
+def prepare(runner_id, region_name=REGION_NAME, hosts=None,
             user='ubuntu', password=None, key_filename=None,
             warn_only=False, timeout=600):
     '''Prepare workers for specific runner
@@ -272,6 +276,8 @@ def prepare(runner_id, region_name=REGION_NAME,
         Runner ID
     region_name : str, optional
         Amazon region idenitifier
+    hosts : list, optional
+        List of specific hosts to prepare
     user : str, optional
         SSH username
     password : str, optional
@@ -290,6 +296,9 @@ def prepare(runner_id, region_name=REGION_NAME,
     '''
     
     workers = get_workers(runner_id, region_name=region_name)
+
+    if type(hosts) is list:
+        workers = [w for w in workers if w in hosts]
 
     with fabfile.settings(user=user, password=password, key_filename=key_filename,
                           hosts=workers, warn_only=warn_only,
@@ -796,7 +805,7 @@ def upload_batch(s3, runner_id, path, exclude_patterns=['\.log$', '\.nc$', '\.py
 
 ### DOWNLOAD #########################################################
 
-def download(runner_id, path, region_name=REGION_NAME):
+def download(runner_id, path, region_name=REGION_NAME, overwrite=False):
     '''Download batch results from Amazon S3 Bucket
 
     Parameters
@@ -805,8 +814,10 @@ def download(runner_id, path, region_name=REGION_NAME):
         Runner ID
     path : str
         Local download location
-    region_name : str
+    region_name : str, optional
         Amazon region identifier
+    overwrite : bool, optional
+        Overwrite existing files
 
     '''
     
@@ -817,17 +828,17 @@ def download(runner_id, path, region_name=REGION_NAME):
                 if not obj.key.endswith('.zip') and not obj.key.startswith('_'):
                     fpath, fname = os.path.split(obj.key)
                     downloadpath = os.path.join(path, fpath)
+                    downloadfile = os.path.join(downloadpath, fname)
                     if not os.path.exists(downloadpath):
                         os.makedirs(downloadpath)
-                    obj.meta.client.download_file(bucket.name,
-                                                  obj.key,
-                                                  os.path.join(downloadpath, fname))
-                    logger.info('Downloaded "{}" to "{}"'.format(obj.key, downloadpath))
+                    if not os.path.exists(downloadfile) or overwrite:
+                        obj.meta.client.download_file(bucket.name, obj.key, downloadfile)
+                        logger.info('Downloaded "{}" to "{}"'.format(obj.key, downloadpath))
 
                                 
 ### DESTROY ##########################################################
 
-def destroy(runner_id, region_name=REGION_NAME):
+def destroy(runner_id, region_name=REGION_NAME, hosts=None):
     '''Destroy runner
     
     Delete Amazon SQS Message Queue associated with specified runner,
@@ -840,6 +851,8 @@ def destroy(runner_id, region_name=REGION_NAME):
         Runner ID
     region_name : str
         Amazon region identifier
+    hosts : list, optional
+        List of specific hosts to destroy
 
     Notes
     -----
@@ -854,7 +867,7 @@ def destroy(runner_id, region_name=REGION_NAME):
     logger.info('Deleted queue "{}"'.format(runner_id))
 
     # terminate workers
-    for instance in iterate_workers(runner_id, region_name=region_name):
+    for instance in iterate_workers(runner_id, region_name=region_name, hosts=hosts):
         instance.terminate()
         logger.info('Terminated instance "{}"'.format(instance.instance_id))
 
@@ -1062,7 +1075,7 @@ def restore_contents(path):
                     os.unlink(fpath)
 
 
-def iterate_workers(runner_id, region_name=REGION_NAME):
+def iterate_workers(runner_id, region_name=REGION_NAME, hosts=None):
     '''Iterator for Amazon EC2 instances associated with a given runner
 
     Parameters
@@ -1071,6 +1084,8 @@ def iterate_workers(runner_id, region_name=REGION_NAME):
         Runner ID
     region_name : str
         Amazon region identifier
+    hosts : list
+        List of specific hosts to iterate
 
     Returns
     -------
@@ -1082,8 +1097,9 @@ def iterate_workers(runner_id, region_name=REGION_NAME):
     ec2 = boto3.resource('ec2', region_name=region_name)
     
     for instance in ec2.instances.all():
-        if runner_id in [t['Value'] for t in instance.tags if t['Key'] == 'Runner']:
-            yield instance
+        if hosts is None or instance.public_ip_address in hosts:
+            if runner_id in [t['Value'] for t in instance.tags if t['Key'] == 'Runner']:
+                yield instance
 
 
 def isiterable(lst):

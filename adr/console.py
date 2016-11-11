@@ -113,7 +113,7 @@ Options:
                          #password=argv['--password'],
                          #key_filename=argv['--key'],
                          ami=argv['--ami'],
-                         asg=argv['--asg'].split(','),
+                         asg=argv['--asg'],
                          akp=argv['--akp'],
                          ait=argv['--ait'])
     
@@ -131,6 +131,7 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
+    --hosts=HOSTS      Comma-separated list of hostnames
     --user=USER        SSH username
     --password=PW      SSH password
     --key=KEY          SSH key filename
@@ -143,6 +144,7 @@ Options:
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     adr.prepare(runner_id,
+                hosts=argv['--hosts'],
                 region_name=argv['--region'],
                 user=argv['--user'],
                 password=argv['--password'],
@@ -161,6 +163,7 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
+    --hosts=HOSTS      Comma-separated list of hostnames
     --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
@@ -170,7 +173,8 @@ Options:
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     adr.start(runner_id,
-              region_name=argv['--region'])
+              region_name=argv['--region'],
+              hosts=argv['--hosts'])
 
 
 def adr_stop():
@@ -184,6 +188,7 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
+    --hosts=HOSTS      Comma-separated list of hostnames
     --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
@@ -193,7 +198,8 @@ Options:
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
     adr.stop(runner_id,
-             region_name=argv['--region'])
+             region_name=argv['--region'],
+             hosts=argv['--hosts'])
 
     
 def adr_destroy():
@@ -207,6 +213,8 @@ Positional arguments:
 
 Options:
     -h, --help         Show this help message and exit
+    --hosts=HOSTS      Comma-separated list of hostnames
+    --region=REGION    Amazon region
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
@@ -214,7 +222,10 @@ Options:
     argv = set_defaults(adr_destroy.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    adr.destroy(runner_id)
+    adr.destroy(runner_id,
+                region_name=argv['--region'],
+                hosts=argv['--hosts'])
+    
     for runner in adr.get_runners():
         if runner != runner_id:
             set_runner(runner)
@@ -282,6 +293,7 @@ Positional arguments:
 Options:
     -h, --help         Show this help message and exit
     --region=REGION    Amazon region
+    --overwrite        Overwrite existing files
     --verbose=LEVEL    Write logging messages [default: 30]
 
     '''
@@ -291,7 +303,8 @@ Options:
     set_logger(runner_id, int(argv['--verbose']))
     return adr.download(runner_id,
                         argv['<path>'],
-                        region_name=argv['--region'])
+                        region_name=argv['--region'],
+                        overwrite=argv['--overwrite'] is not None)
 
 
 def adr_list():
@@ -398,7 +411,15 @@ def set_defaults(docs):
                           r'\1 [default: {}]'.format(v),
                           docs, flags=re.MULTILINE)
 
-    return docopt.docopt(docs)
+    argv = docopt.docopt(docs)
+
+    # split lists
+    for k in ['--hosts', '--asg']:
+        if argv.has_key(k):
+            if argv[k]:
+                argv[k] = argv[k].split(',')
+
+    return argv
 
 
 def set_logger(name, verbosity=30):
