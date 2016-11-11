@@ -304,7 +304,7 @@ Options:
     return adr.download(runner_id,
                         argv['<path>'],
                         region_name=argv['--region'],
-                        overwrite=argv['--overwrite'] is not None)
+                        overwrite=argv['--overwrite'])
 
 
 def adr_list():
