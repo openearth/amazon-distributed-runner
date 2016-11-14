@@ -326,8 +326,11 @@ Options:
     argv = set_defaults(adr_list.__doc__)
     runner_id = get_runner(argv['<runner>'])
     set_logger(runner_id, int(argv['--verbose']))
-    for worker in adr.get_workers(runner_id, region_name=argv['--region']):
-        print worker
+    for instance in adr.iterate_workers(runner_id, region_name=argv['--region']):
+        if instance.public_ip_address:
+            print '%s\t(running)' % instance.public_ip_address
+        else:
+            print '0.0.0.0 (stopped)'
 
     
 def adr_set():

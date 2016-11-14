@@ -921,7 +921,7 @@ def get_runners(region_name=REGION_NAME):
     return runners
 
         
-def get_workers(runner_id, region_name=REGION_NAME, prefix='_workers/'):
+def get_workers(runner_id, region_name=REGION_NAME):
     '''Get list of public IP addresses of workers for specific runner
 
     Parameters
@@ -930,8 +930,6 @@ def get_workers(runner_id, region_name=REGION_NAME, prefix='_workers/'):
         Runner ID
     region_name : str, optional
         Amazon region identifier
-    prefix : str, optional
-        Prefix used for registration of workers
 
     Returns
     -------
@@ -946,14 +944,19 @@ def get_workers(runner_id, region_name=REGION_NAME, prefix='_workers/'):
 
     '''    
 
-    s3 = boto3.resource('s3', region_name=region_name)
+#    s3 = boto3.resource('s3', region_name=region_name)
+#
+#    workers = []
+#    for bucket in s3.buckets.all():
+#        if bucket.name == runner_id:
+#            for obj in bucket.objects.filter(Prefix=prefix):
+#                if obj.key != prefix:
+#                    workers.append(os.path.split(obj.key)[1])
 
     workers = []
-    for bucket in s3.buckets.all():
-        if bucket.name == runner_id:
-            for obj in bucket.objects.filter(Prefix=prefix):
-                if obj.key != prefix:
-                    workers.append(os.path.split(obj.key)[1])
+    for instance in iterate_workers(runner_id, region_name=region_name):
+        if instance.public_ip_address:
+            workers.append(instance.public_ip_address)
 
     return workers
             
